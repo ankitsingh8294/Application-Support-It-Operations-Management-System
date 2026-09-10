@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SupportOps Management System</title>
+<style>
+  :root{
+    --bg: #F2F4F7;
+    --panel: #FFFFFF;
+    --border: #E1E5EB;
+    --text: #1B2130;
+    --text-muted: #6B7482;
+    --sidebar: #14213D;
+    --sidebar-hover: #1E2E52;
+    --sidebar-active: #2F6FED;
+    --accent: #2F6FED;
+    --accent-soft: #E9F0FE;
+    --success: #1B8A5A;
+    --success-soft: #E5F5EE;
+    --warning: #B9770E;
+    --warning-soft: #FCF1DE;
+    --critical: #C0392B;
+    --critical-soft: #FBEAE8;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a, button, input, select, textarea{ font-family: inherit; font-size: inherit; }
+
+  .app{ display:flex; min-height:100vh; }
+
+  /* ---------- SIDEBAR ---------- */
+  .sidebar{
+    width: 250px;
+    flex-shrink:0;
+    background: var(--sidebar);
+    color: #C9D3E8;
+    display:flex;
+    flex-direction:column;
+    padding: 20px 14px;
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding: 6px 8px 20px 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    margin-bottom: 16px;
+  }
+  .brand-mark{
+    width:34px; height:34px; border-radius:8px;
+    background: linear-gradient(180deg, var(--accent), #1B4FC7);
+    display:flex; align-items:center; justify-content:center;
+    color:#fff; font-weight:700; font-size:15px;
+    flex-shrink:0;
+  }
+  .brand-text{ line-height:1.25; }
+  .brand-text strong{ display:block; font-size:14.5px; color:#fff; letter-spacing:0.2px; }
+  .brand-text span{ display:block; font-size:11.5px; color:#8695B7; }
+
+  nav.navlist{ display:flex; flex-direction:column; gap:2px; flex:1; }
+  .navbtn{
+    display:flex; align-items:center; gap:11px;
+    padding: 10px 12px;
+    border-radius: 7px;
+    background: transparent;
+    border: none;
+    color: #B9C4DA;
+    text-align:left;
+    cursor:pointer;
+    transition: background .12s ease, color .12s ease;
+  }
+  .navbtn:hover{ background: var(--sidebar-hover); color:#fff; }
+  .navbtn.active{ background: var(--sidebar-active); color:#fff; }
+  .navbtn .icon{ width:17px; height:17px; flex-shrink:0; }
+  .navbtn .label{ font-size: 13.5px; }
+
+  .sidebar-footer{
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+  }
+  .demo-pill{
+    display:inline-block;
+    background: #3A2C0A;
+    color: #F3C361;
+    font-size: 11.5px;
+    font-weight:600;
+    padding: 3px 9px;
+    border-radius: 20px;
+  }
+  .sidebar-footer p{
+    font-size: 11.5px;
+    color:#7C88A6;
+    line-height:1.5;
+    margin: 8px 2px 0 2px;
+  }
+
+  /* ---------- MAIN ---------- */
+  .main{ flex:1; min-width:0; padding: 26px 34px 60px 34px; }
+
+  .topbar{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .topbar h1{ font-size: 21px; font-weight:700; margin:0; letter-spacing:-0.2px; }
+  .topbar p.subtitle{ margin: 4px 0 0 0; font-size:13px; color:var(--text-muted); }
+  .demo-tag{
+    background: var(--warning-soft);
+    color: var(--warning);
+    font-size: 12px;
+    font-weight:600;
+    padding: 4px 11px;
+    border-radius: 20px;
+    white-space:nowrap;
+    height: fit-content;
+  }
+
+  .page{ display:none; }
+  .page.visible{ display:block; }
+
+  /* ---------- KPI CARDS ---------- */
+  .kpi-grid{
+    display:grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 22px;
+  }
+  .kpi-card{
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 18px;
+    border-left: 3px solid var(--accent);
+  }
+  .kpi-card.c-success{ border-left-color: var(--success); }
+  .kpi-card.c-warning{ border-left-color: var(--warning); }
+  .kpi-card.c-critical{ border-left-color: var(--critical); }
+  .kpi-value{ font-size: 26px; font-weight:700; color:var(--text); }
+  .kpi-label{ font-size: 12.5px; color: var(--text-muted); margin-top:3px; }
+
+  /* ---------- PANELS / CARDS ---------- */
+  .panel{
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 20px;
+    margin-bottom: 18px;
+  }
+  .panel h2{ font-size: 15.5px; margin: 0 0 14px 0; font-weight:600; }
+  .panel h3{ font-size: 14px; margin: 0 0 10px 0; font-weight:600; color: var(--text); }
+
+  .chart-grid{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .chart-box{ position:relative; height: 260px; }
+
+  /* ---------- TOOLBAR / FILTERS ---------- */
+  .toolbar{
+    display:flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items:flex-end;
+    margin-bottom: 14px;
+    justify-content: space-between;
+  }
+  .filters{ display:flex; flex-wrap:wrap; gap:10px; }
+  .field{ display:flex; flex-direction:column; gap:4px; }
+  .field label{ font-size:11.5px; color:var(--text-muted); font-weight:600; }
+  .field input, .field select, .field textarea{
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 10px;
+    background: #fff;
+    color: var(--text);
+    min-width: 160px;
+  }
+  .field textarea{ min-width: 260px; resize: vertical; }
+  .field input:focus, .field select:focus, .field textarea:focus{
+    outline: 2px solid var(--accent-soft);
+    border-color: var(--accent);
+  }
+
+  .btn{
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: #fff;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor:pointer;
+    font-weight:600;
+    font-size: 13px;
+  }
+  .btn:hover{ background:#1B4FC7; }
+  .btn.secondary{
+    background: #fff;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+  }
+  .btn.secondary:hover{ background: var(--accent-soft); }
+  .btn.small{ padding: 5px 10px; font-size:12.5px; }
+
+  .table-meta{ font-size:12.5px; color:var(--text-muted); margin-bottom:8px; }
+
+  /* ---------- TABLE ---------- */
+  .table-wrap{ overflow-x:auto; border: 1px solid var(--border); border-radius: 8px; }
+  table{ width:100%; border-collapse: collapse; font-size: 13px; }
+  thead th{
+    text-align:left;
+    background: #F7F8FA;
+    color: var(--text-muted);
+    font-weight:600;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border);
+    white-space:nowrap;
+  }
+  tbody td{
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border);
+    white-space:nowrap;
+  }
+  tbody tr:last-child td{ border-bottom:none; }
+  tbody tr:hover{ background: #FAFBFD; }
+  td.wrap, th.wrap{ white-space:normal; min-width:180px; }
+  .code{ font-family: var(--mono); font-size:12.5px; color:#3B4256; }
+
+  .badge{
+    display:inline-block;
+    padding: 2px 9px;
+    border-radius: 20px;
+    font-size: 11.5px;
+    font-weight:600;
+  }
+  .badge.status-Active, .badge.status-Approved, .badge.status-Resolved, .badge.status-Closed{
+    background: var(--success-soft); color: var(--success);
+  }
+  .badge.status-Inactive, .badge.status-Rejected{
+    background: var(--critical-soft); color: var(--critical);
+  }
+  .badge.status-Pending, .badge.status-Open{
+    background: var(--warning-soft); color: var(--warning);
+  }
+  .badge.status-In-Progress{
+    background: var(--accent-soft); color: var(--accent);
+  }
+  .badge.priority-Low{ background:#EEF1F6; color:#5B6472; }
+  .badge.priority-Medium{ background: var(--accent-soft); color: var(--accent); }
+  .badge.priority-High{ background: var(--warning-soft); color: var(--warning); }
+  .badge.priority-Critical{ background: var(--critical-soft); color: var(--critical); }
+
+  /* ---------- MODAL ---------- */
+  .modal-overlay{
+    position: fixed; inset:0;
+    background: rgba(15,20,30,0.45);
+    display:flex; align-items:center; justify-content:center;
+    z-index: 100;
+  }
+  .modal-overlay.hidden{ display:none; }
+  .modal{
+    background:#fff;
+    width: 560px;
+    max-width: 92vw;
+    max-height: 86vh;
+    overflow-y:auto;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+  .modal-header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .modal-header h3{ margin:0; font-size:15.5px; }
+  .modal-header button{
+    border:none; background:transparent; font-size:20px; cursor:pointer; color:var(--text-muted); line-height:1;
+  }
+  .modal-body{ padding: 18px 20px 20px 20px; }
+  .form-grid{ display:grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; }
+  .form-grid .full{ grid-column: 1 / -1; }
+  .form-grid .field label{ margin-bottom:2px; }
+  .form-grid .field input, .form-grid .field select, .form-grid .field textarea{ width:100%; min-width:0; }
+  .modal-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top: 16px; }
+  .helper-text{ font-size:12px; color:var(--text-muted); margin: 0 0 12px 0; }
+
+  /* ---------- TOAST ---------- */
+  .toast{
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: #14213D; color:#fff;
+    padding: 10px 18px; border-radius: 8px;
+    font-size: 13px; z-index: 200;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+  }
+  .toast.hidden{ display:none; }
+
+  .empty-state{ padding: 30px; text-align:center; color: var(--text-muted); font-size:13px; }
+
+  @media (max-width: 900px){
+    .kpi-grid{ grid-template-columns: repeat(2,1fr); }
+    .chart-grid{ grid-template-columns: 1fr; }
+    .sidebar{ width: 210px; }
+    .main{ padding: 20px; }
+    .form-grid{ grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">SO</div>
+      <div class="brand-text">
+        <strong>SupportOps</strong>
+        <span>Application Support &amp; IT Ops</span>
+      </div>
+    </div>
+
+    <nav class="navlist" id="navlist">
+      <button class="navbtn active" data-page="dashboard">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+        <span class="label">Dashboard</span>
+      </button>
+      <button class="navbtn" data-page="users">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="8" r="2.6"/><path d="M15.5 14.2c2.6.4 4.5 2.6 4.5 5.3"/></svg>
+        <span class="label">User &amp; ID Management</span>
+      </button>
+      <button class="navbtn" data-page="requests">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>
+        <span class="label">Access Requests</span>
+      </button>
+      <button class="navbtn" data-page="tickets">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4Z"/><path d="M10 6v12" stroke-dasharray="2.5 2.5"/></svg>
+        <span class="label">Support Tickets</span>
+      </button>
+      <button class="navbtn" data-page="plants">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 21V9l6-4 6 4v12"/><path d="M14 21v-7h4v7"/><path d="M8 12h.01M8 16h.01"/></svg>
+        <span class="label">Plant / Site Mgmt</span>
+      </button>
+      <button class="navbtn" data-page="reports">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V5M4 19h16"/><rect x="7" y="11" width="3" height="8"/><rect x="12" y="7" width="3" height="12"/><rect x="17" y="13" width="3" height="6"/></svg>
+        <span class="label">Reporting</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <span class="demo-pill">Demo / Fictional Data</span>
+      <p>All records shown are randomly generated for portfolio purposes and do not represent a real company.</p>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <section class="page visible" id="page-dashboard">
+      <div class="topbar">
+        <div>
+          <h1>Application Support &amp; IT Operations Dashboard</h1>
+          <p class="subtitle">Live snapshot of users, tickets and access requests across all plants</p>
+        </div>
+        <span class="demo-tag">Demo / Fictional Data</span>
+      </div>
+
+      <div class="kpi-grid" id="kpiGrid"></div>
+
+      <div class="chart-grid">
+        <div class="panel">
+          <h3>Tickets by priority</h3>
+          <div class="chart-box"><canvas id="chartPriority"></canvas></div>
+        </div>
+        <div class="panel">
+          <h3>Tickets by category</h3>
+          <div class="chart-box"><canvas id="chartCategory"></canvas></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Tickets by plant / site</h3>
+        <div class="chart-box"><canvas id="chartPlant"></canvas></div>
+      </div>
+    </section>
+
+    <!-- USERS -->
+    <section class="page" id="page-users">
+      <div class="topbar">
+        <div>
+          <h1>User &amp; ID Management</h1>
+          <p class="subtitle">Manage employee application accounts, roles and access status</p>
+        </div>
+        <button class="btn" id="btnAddUser">Add user</button>
+      </div>
+
+      <div class="panel">
+        <div class="toolbar">
+          <div class="filters">
+            <div class="field">
+              <label>Search</label>
+              <input type="text" id="userSearch" placeholder="Name, staff code or email" />
+            </div>
+            <div class="field">
+              <label>Department</label>
+              <select id="userDeptFilter"></select>
+            </div>
+            <div class="field">
+              <label>Status</label>
+              <select id="userStatusFilter">
+                <option>All</option><option>Active</option><option>Inactive</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <p class="table-meta" id="userMeta"></p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>User ID</th><th>Name</th><th>Staff code</th><th>Department</th>
+              <th>Designation</th><th>Plant / site</th><th>Email</th><th>App role</th>
+              <th>Status</th><th></th>
+            </tr></thead>
+            <tbody id="usersTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ACCESS REQUESTS -->
+    <section class="page" id="page-requests">
+      <div class="topbar">
+        <div>
+          <h1>Application Access Requests</h1>
+          <p class="subtitle">Track requests for application access across plants and roles</p>
+        </div>
+        <button class="btn" id="btnAddRequest">New request</button>
+      </div>
+
+      <div class="panel">
+        <div class="toolbar">
+          <div class="filters">
+            <div class="field">
+              <label>Search user</label>
+              <input type="text" id="reqSearch" placeholder="User name" />
+            </div>
+            <div class="field">
+              <label>Status</label>
+              <select id="reqStatusFilter">
+                <option>All</option><option>Pending</option><option>Approved</option><option>Rejected</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Plant / site</label>
+              <select id="reqPlantFilter"></select>
+            </div>
+          </div>
+        </div>
+        <p class="table-meta" id="reqMeta"></p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Request ID</th><th>User</th><th>Plant / site</th><th>Application</th>
+              <th>Requested role</th><th>Request date</th><th>Requested by</th>
+              <th>Status</th><th>Approved by</th><th class="wrap">Remarks</th><th></th>
+            </tr></thead>
+            <tbody id="requestsTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TICKETS -->
+    <section class="page" id="page-tickets">
+      <div class="topbar">
+        <div>
+          <h1>Support Tickets</h1>
+          <p class="subtitle">Log, assign and track resolution of application/IT issues</p>
+        </div>
+        <button class="btn" id="btnAddTicket">Create ticket</button>
+      </div>
+
+      <div class="panel">
+        <div class="toolbar">
+          <div class="filters">
+            <div class="field">
+              <label>Search</label>
+              <input type="text" id="tickSearch" placeholder="Ticket ID or user name" />
+            </div>
+            <div class="field">
+              <label>Status</label>
+              <select id="tickStatusFilter">
+                <option>All</option><option>Open</option><option>In Progress</option>
+                <option>Pending</option><option>Resolved</option><option>Closed</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Priority</label>
+              <select id="tickPriorityFilter">
+                <option>All</option><option>Low</option><option>Medium</option><option>High</option><option>Critical</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Category</label>
+              <select id="tickCategoryFilter"></select>
+            </div>
+          </div>
+        </div>
+        <p class="table-meta" id="tickMeta"></p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Ticket ID</th><th>Date</th><th>User</th><th>Plant / site</th>
+              <th>Category</th><th class="wrap">Issue</th><th>Priority</th>
+              <th>Assigned to</th><th>Status</th><th></th>
+            </tr></thead>
+            <tbody id="ticketsTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- PLANTS -->
+    <section class="page" id="page-plants">
+      <div class="topbar">
+        <div>
+          <h1>Plant / Site Management</h1>
+          <p class="subtitle">Fictional plant/site locations supported by this system</p>
+        </div>
+        <span class="demo-tag">Demo / Fictional Data</span>
+      </div>
+
+      <div class="panel">
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Plant / site</th><th>Location</th><th>Status</th>
+              <th>Active users</th><th>Open tickets</th>
+            </tr></thead>
+            <tbody id="plantsTbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Open tickets by plant</h3>
+        <div class="chart-box"><canvas id="chartPlantOpen"></canvas></div>
+      </div>
+    </section>
+
+    <!-- REPORTS -->
+    <section class="page" id="page-reports">
+      <div class="topbar">
+        <div>
+          <h1>Reporting</h1>
+          <p class="subtitle">Simple operational reports for the support team</p>
+        </div>
+        <span class="demo-tag">Demo / Fictional Data</span>
+      </div>
+
+      <div class="panel">
+        <h2>1. Tickets by status</h2>
+        <div class="chart-grid">
+          <div class="table-wrap"><table><thead><tr><th>Status</th><th>Count</th></tr></thead><tbody id="repStatusTbody"></tbody></table></div>
+          <div class="chart-box"><canvas id="chartRepStatus"></canvas></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>2. Tickets by priority</h2>
+        <div class="table-wrap"><table><thead><tr><th>Priority</th><th>Count</th></tr></thead><tbody id="repPriorityTbody"></tbody></table></div>
+      </div>
+
+      <div class="panel">
+        <h2>3. Tickets by issue category</h2>
+        <div class="table-wrap"><table><thead><tr><th>Category</th><th>Count</th></tr></thead><tbody id="repCategoryTbody"></tbody></table></div>
+      </div>
+
+      <div class="panel">
+        <h2>4. Tickets by plant</h2>
+        <div class="table-wrap"><table><thead><tr><th>Plant / site</th><th>Count</th></tr></thead><tbody id="repPlantTbody"></tbody></table></div>
+      </div>
+
+      <div class="panel">
+        <h2>5. Technician / support workload</h2>
+        <div class="chart-grid">
+          <div class="table-wrap"><table><thead><tr><th>Technician</th><th>Assigned tickets</th></tr></thead><tbody id="repWorkloadTbody"></tbody></table></div>
+          <div class="chart-box"><canvas id="chartRepWorkload"></canvas></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>6. Access requests by status</h2>
+        <div class="table-wrap"><table><thead><tr><th>Status</th><th>Count</th></tr></thead><tbody id="repReqStatusTbody"></tbody></table></div>
+      </div>
+
+      <div class="panel">
+        <h2>7. Monthly ticket trend</h2>
+        <div class="chart-box"><canvas id="chartRepTrend"></canvas></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay hidden" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTitle">Title</h3>
+      <button id="modalClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<div class="toast hidden" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script>
+/* =================================================================
+   SupportOps Management System — client-side demo application
+   All data is generated in memory when the page loads. Nothing is
+   sent to a server and nothing is saved between page reloads —
+   this is a front-end-only portfolio demo.
+================================================================= */
+
+/* ---------------- seeded random (deterministic demo data) ---------------- */
+function mulberry32(seed){
+  return function(){
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const rand = mulberry32(42);
+function pick(arr){ return arr[Math.floor(rand() * arr.length)]; }
+function pickWeighted(items, weights){
+  const total = weights.reduce((a,b)=>a+b,0);
+  let r = rand() * total;
+  for(let i=0;i<items.length;i++){ r -= weights[i]; if(r<=0) return items[i]; }
+  return items[items.length-1];
+}
+function randInt(min,max){ return Math.floor(rand()*(max-min+1))+min; }
+
+/* ---------------- reference lists ---------------- */
+const FIRST_NAMES = ["Aditya","Rohan","Priya","Sneha","Karan","Neha","Vikram","Ananya","Rahul","Pooja","Arjun","Divya","Manish","Kavya","Suresh","Meena","Ravi","Shreya","Amit","Nisha","Sanjay","Ritu","Deepak","Anjali","Vivek","Swati","Nikhil","Preeti","Ashok","Kiran","Rajesh","Simran","Harish","Payal","Gaurav","Isha"];
+const LAST_NAMES = ["Sharma","Verma","Iyer","Nair","Patil","Reddy","Gupta","Singh","Kulkarni","Menon","Joshi","Kapoor","Chauhan","Rao","Desai","Bhatt","Yadav","Pillai","Shetty","Mishra"];
+const DEPARTMENTS = ["Production","Quality Control","Maintenance","Stores / Inventory","Human Resources","Finance","IT Support","Logistics","Safety"];
+const DESIGNATIONS = ["Operator","Shift Supervisor","Executive","Senior Executive","Engineer","Technician","Manager","Assistant Manager"];
+const APP_ROLES = ["Admin","Supervisor","Operator","Viewer"];
+const PLANT_NAMES = ["Greenfield Plant - Nashik","Riverside Unit - Pune","Northgate Facility - Ahmedabad","Sunrise Industrial Site - Nagpur","Coastal Plant - Vizag","Highland Unit - Indore","Metro Facility - Bhiwandi","Lakeview Plant - Coimbatore"];
+const TECHNICIANS = ["Deepa Kulkarni","Sameer Khan","Anita Bose","Farhan Ali","Ritika Sen","Manoj Tiwari","Sunita Rao","Irfan Sheikh","Latha Krishnan","Vishal Chopra","Neha Bhat","Tarun Malhotra"];
+const APPLICATIONS = ["Plant ERP","MIS Reporting Portal","Attendance System","Inventory Management App","Maintenance Tracker","Quality Dashboard"];
+const TICKET_CATEGORIES = ["Application Issue","Login / Access","Hardware","Network","Printer","Data / Report","Other"];
+const PRIORITIES = ["Low","Medium","High","Critical"];
+const TICKET_STATUSES = ["Open","In Progress","Pending","Resolved","Closed"];
+const REQUEST_STATUSES = ["Pending","Approved","Rejected"];
+const REQUESTED_BY_OPTIONS = ["Self","Department Head","Plant Supervisor"];
+const ISSUE_SAMPLES = {
+  "Application Issue": ["Application freezes when generating monthly report.","Error message appears while saving production entry.","Module loads slowly during shift-change hours."],
+  "Login / Access": ["User unable to log in after password reset.","Access denied error for inventory module.","Account locked after multiple failed login attempts."],
+  "Hardware": ["Desktop not powering on at workstation.","Barcode scanner not detected by system.","Monitor display flickering intermittently."],
+  "Network": ["Unable to connect to plant local network.","Application server unreachable from shop floor terminal.","Intermittent network drops during data upload."],
+  "Printer": ["Report printout is blank on shop floor printer.","Printer showing offline status.","Paper jam error not clearing after reset."],
+  "Data / Report": ["Monthly report showing incorrect totals.","Data not syncing between plant and head office.","Export to Excel option not working."],
+  "Other": ["General query regarding new module rollout.","Request for training on updated interface.","Feedback on dashboard usability."]
+};
+const REMARK_SAMPLES = ["Approved as per department head confirmation.","Pending confirmation from plant supervisor.","Rejected - role already assigned to user.","Access granted for temporary project need.",""];
+
+function isoDaysAgo(days){
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return d.toISOString().slice(0,10);
+}
+function addDays(dateStr, days){
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0,10);
+}
+
+/* ---------------- in-memory data store ---------------- */
+const DB = { plants: [], users: [], requests: [], tickets: [] };
+
+function seedData(){
+  // plants
+  PLANT_NAMES.forEach(name=>{
+    const location = name.split(" - ").pop();
+    DB.plants.push({ name, location, status: rand() > 0.1 ? "Active" : "Under Maintenance" });
+  });
+
+  // users
+  const usedNames = new Set();
+  for(let i=1;i<=30;i++){
+    let name;
+    do{ name = pick(FIRST_NAMES) + " " + pick(LAST_NAMES); } while(usedNames.has(name));
+    usedNames.add(name);
+    const plant = pick(PLANT_NAMES);
+    DB.users.push({
+      id: "USR" + String(i).padStart(3,"0"),
+      name, staffCode: "EMP" + (1000+i),
+      department: pick(DEPARTMENTS),
+      designation: pick(DESIGNATIONS),
+      plant,
+      email: name.split(" ")[0].toLowerCase() + "." + name.split(" ")[1].toLowerCase() + "@democorp.example",
+      phone: "9" + randInt(100000000,999999999),
+      role: pick(APP_ROLES),
+      status: pickWeighted(["Active","Inactive"], [85,15]),
+      createdDate: isoDaysAgo(randInt(30,700))
+    });
+  }
+  const userNames = DB.users.map(u=>u.name);
+
+  // access requests
+  for(let i=1;i<=20;i++){
+    const status = pickWeighted(REQUEST_STATUSES, [40,45,15]);
+    DB.requests.push({
+      id: "REQ" + String(i).padStart(3,"0"),
+      userName: pick(userNames),
+      plant: pick(PLANT_NAMES),
+      application: pick(APPLICATIONS),
+      requestedRole: pick(APP_ROLES),
+      requestDate: isoDaysAgo(randInt(1,120)),
+      requestedBy: pick(REQUESTED_BY_OPTIONS),
+      status,
+      approvedBy: status !== "Pending" ? pick(TECHNICIANS) : "",
+      remarks: pick(REMARK_SAMPLES)
+    });
+  }
+
+  // tickets
+  for(let i=1;i<=50;i++){
+    const category = pick(TICKET_CATEGORIES);
+    const status = pickWeighted(TICKET_STATUSES, [15,20,15,25,25]);
+    const date = isoDaysAgo(randInt(1,180));
+    const closedNow = (status === "Resolved" || status === "Closed");
+    DB.tickets.push({
+      id: "TCK" + String(i).padStart(3,"0"),
+      date,
+      userName: pick(userNames),
+      plant: pick(PLANT_NAMES),
+      category,
+      description: pick(ISSUE_SAMPLES[category]),
+      priority: pickWeighted(PRIORITIES, [30,35,25,10]),
+      assignedTo: pick(TECHNICIANS),
+      status,
+      resolution: closedNow ? "Issue investigated and resolved by support team." : "",
+      closedDate: closedNow ? addDays(date, randInt(1,5)) : ""
+    });
+  }
+}
+seedData();
+
+let nextUserSeq = DB.users.length + 1;
+let nextReqSeq = DB.requests.length + 1;
+let nextTicketSeq = DB.tickets.length + 1;
+
+/* ---------------- generic helpers ---------------- */
+const $ = (id)=>document.getElementById(id);
+function esc(s){ return (s ?? "").toString().replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+function badge(value, prefix){
+  const cls = prefix + "-" + value.replace(/\s+/g,"-");
+  return `<span class="badge ${cls}">${esc(value)}</span>`;
+}
+function countBy(arr, key){
+  const map = {};
+  arr.forEach(item=>{ const k = item[key]; map[k] = (map[k]||0)+1; });
+  return map;
+}
+function showToast(msg){
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.remove("hidden");
+  clearTimeout(showToast._timer);
+  showToast._timer = setTimeout(()=>t.classList.add("hidden"), 2600);
+}
+
+/* ---------------- navigation ---------------- */
+document.querySelectorAll(".navbtn").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll(".navbtn").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    document.querySelectorAll(".page").forEach(p=>p.classList.remove("visible"));
+    $("page-" + btn.dataset.page).classList.add("visible");
+    if(btn.dataset.page === "reports") renderReports();
+    if(btn.dataset.page === "plants") renderPlants();
+  });
+});
+
+/* ---------------- modal helpers ---------------- */
+function openModal(title, bodyHtml, onRender){
+  $("modalTitle").textContent = title;
+  $("modalBody").innerHTML = bodyHtml;
+  $("modalOverlay").classList.remove("hidden");
+  if(onRender) onRender();
+}
+function closeModal(){ $("modalOverlay").classList.add("hidden"); }
+$("modalClose").addEventListener("click", closeModal);
+$("modalOverlay").addEventListener("click", (e)=>{ if(e.target === $("modalOverlay")) closeModal(); });
+
+/* ==================== CHART.JS INSTANCES ==================== */
+const chartRefs = {};
+function drawChart(canvasId, config){
+  const ctx = $(canvasId).getContext("2d");
+  if(chartRefs[canvasId]) chartRefs[canvasId].destroy();
+  chartRefs[canvasId] = new Chart(ctx, config);
+}
+const PALETTE = ["#2F6FED","#1B8A5A","#B9770E","#C0392B","#6B7482","#8E44AD","#16A085"];
+
+/* ==================== DASHBOARD ==================== */
+function computeMetrics(){
+  const totalUsers = DB.users.length;
+  const activeUsers = DB.users.filter(u=>u.status==="Active").length;
+  const openTickets = DB.tickets.filter(t=>t.status==="Open").length;
+  const pendingTickets = DB.tickets.filter(t=>t.status==="Pending").length;
+  const resolvedTickets = DB.tickets.filter(t=>t.status==="Resolved"||t.status==="Closed").length;
+  const openRequests = DB.requests.filter(r=>r.status==="Pending").length;
+
+  const closed = DB.tickets.filter(t=>t.closedDate);
+  let avgResolution = 0;
+  if(closed.length){
+    const totalDays = closed.reduce((sum,t)=>{
+      const d1 = new Date(t.date), d2 = new Date(t.closedDate);
+      return sum + Math.round((d2-d1)/86400000);
+    },0);
+    avgResolution = Math.round((totalDays/closed.length)*10)/10;
+  }
+  return { totalUsers, activeUsers, openTickets, pendingTickets, resolvedTickets, openRequests, avgResolution };
+}
+
+function renderDashboard(){
+  const m = computeMetrics();
+  $("kpiGrid").innerHTML = `
+    <div class="kpi-card"><div class="kpi-value">${m.totalUsers}</div><div class="kpi-label">Total users</div></div>
+    <div class="kpi-card c-success"><div class="kpi-value">${m.activeUsers}</div><div class="kpi-label">Active users</div></div>
+    <div class="kpi-card c-warning"><div class="kpi-value">${m.openTickets}</div><div class="kpi-label">Open tickets</div></div>
+    <div class="kpi-card c-warning"><div class="kpi-value">${m.pendingTickets}</div><div class="kpi-label">Pending tickets</div></div>
+    <div class="kpi-card c-success"><div class="kpi-value">${m.resolvedTickets}</div><div class="kpi-label">Resolved tickets</div></div>
+    <div class="kpi-card c-critical"><div class="kpi-value">${m.openRequests}</div><div class="kpi-label">Open access requests</div></div>
+    <div class="kpi-card"><div class="kpi-value">${m.avgResolution}</div><div class="kpi-label">Avg. resolution time (days)</div></div>
+  `;
+
+  const byPriority = countBy(DB.tickets, "priority");
+  drawChart("chartPriority", {
+    type: "bar",
+    data: { labels: PRIORITIES, datasets: [{ data: PRIORITIES.map(p=>byPriority[p]||0), backgroundColor: PALETTE }] },
+    options: { plugins:{legend:{display:false}}, scales:{ y:{ beginAtZero:true, ticks:{precision:0} } } }
+  });
+
+  const byCategory = countBy(DB.tickets, "category");
+  drawChart("chartCategory", {
+    type: "doughnut",
+    data: { labels: Object.keys(byCategory), datasets: [{ data: Object.values(byCategory), backgroundColor: PALETTE }] },
+    options: { plugins:{ legend:{ position:"bottom", labels:{ boxWidth:11, font:{size:11} } } } }
+  });
+
+  const byPlant = countBy(DB.tickets, "plant");
+  drawChart("chartPlant", {
+    type: "bar",
+    data: { labels: Object.keys(byPlant), datasets: [{ data: Object.values(byPlant), backgroundColor: "#2F6FED" }] },
+    options: { indexAxis:"y", plugins:{legend:{display:false}}, scales:{ x:{ beginAtZero:true, ticks:{precision:0} } } }
+  });
+}
+
+/* ==================== USERS ==================== */
+function populateDeptFilter(){
+  const sel = $("userDeptFilter");
+  sel.innerHTML = `<option>All</option>` + DEPARTMENTS.map(d=>`<option>${d}</option>`).join("");
+}
+function populateCategoryFilter(){
+  $("tickCategoryFilter").innerHTML = `<option>All</option>` + TICKET_CATEGORIES.map(c=>`<option>${c}</option>`).join("");
+}
+function populatePlantFilters(){
+  const opts = `<option>All</option>` + PLANT_NAMES.map(p=>`<option>${esc(p)}</option>`).join("");
+  $("reqPlantFilter").innerHTML = opts;
+}
+
+function renderUsers(){
+  const search = $("userSearch").value.trim().toLowerCase();
+  const dept = $("userDeptFilter").value;
+  const status = $("userStatusFilter").value;
+
+  let rows = DB.users.slice().sort((a,b)=> b.createdDate.localeCompare(a.createdDate));
+  if(search) rows = rows.filter(u=> u.name.toLowerCase().includes(search) || u.staffCode.toLowerCase().includes(search) || u.email.toLowerCase().includes(search));
+  if(dept !== "All") rows = rows.filter(u=>u.department===dept);
+  if(status !== "All") rows = rows.filter(u=>u.status===status);
+
+  $("userMeta").textContent = `Showing ${rows.length} of ${DB.users.length} users`;
+
+  $("usersTbody").innerHTML = rows.length ? rows.map(u=>`
+    <tr>
+      <td class="code">${u.id}</td>
+      <td>${esc(u.name)}</td>
+      <td class="code">${u.staffCode}</td>
+      <td>${esc(u.department)}</td>
+      <td>${esc(u.designation)}</td>
+      <td>${esc(u.plant)}</td>
+      <td>${esc(u.email)}</td>
+      <td>${esc(u.role)}</td>
+      <td>${badge(u.status,"status")}</td>
+      <td>
+        <button class="btn secondary small" onclick="openEditUser('${u.id}')">Edit</button>
+        <button class="btn secondary small" onclick="toggleUserStatus('${u.id}')">${u.status==="Active"?"Deactivate":"Activate"}</button>
+      </td>
+    </tr>`).join("") : `<tr><td colspan="10"><div class="empty-state">No users match the current filters.</div></td></tr>`;
+}
+
+function userFormHtml(u){
+  const opt = (val, cur) => `<option ${val===cur?"selected":""}>${val}</option>`;
+  return `
+    <div class="form-grid">
+      <div class="field"><label>Employee name</label><input id="f_name" value="${esc(u?.name||"")}" /></div>
+      <div class="field"><label>Staff code</label><input id="f_code" value="${esc(u?.staffCode||"")}" placeholder="EMP1050" /></div>
+      <div class="field"><label>Department</label><select id="f_dept">${DEPARTMENTS.map(d=>opt(d,u?.department)).join("")}</select></div>
+      <div class="field"><label>Designation</label><input id="f_desig" value="${esc(u?.designation||"")}" /></div>
+      <div class="field"><label>Plant / site</label><select id="f_plant">${PLANT_NAMES.map(p=>opt(p,u?.plant)).join("")}</select></div>
+      <div class="field"><label>Email</label><input id="f_email" value="${esc(u?.email||"")}" /></div>
+      <div class="field"><label>Phone</label><input id="f_phone" value="${esc(u?.phone||"")}" /></div>
+      <div class="field"><label>Application role</label><select id="f_role">${APP_ROLES.map(r=>opt(r,u?.role)).join("")}</select></div>
+      <div class="field"><label>Account status</label><select id="f_status">${["Active","Inactive"].map(s=>opt(s,u?.status||"Active")).join("")}</select></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn" id="userSaveBtn">${u ? "Save changes" : "Add user"}</button>
+    </div>`;
+}
+
+$("btnAddUser").addEventListener("click", ()=>{
+  openModal("Add new user", userFormHtml(null), ()=>{
+    $("userSaveBtn").addEventListener("click", ()=>{
+      const name = $("f_name").value.trim();
+      const code = $("f_code").value.trim();
+      const email = $("f_email").value.trim();
+      if(!name || !code || !email){ showToast("Please fill employee name, staff code and email."); return; }
+      const id = "USR" + String(nextUserSeq++).padStart(3,"0");
+      DB.users.unshift({
+        id, name, staffCode: code,
+        department: $("f_dept").value, designation: $("f_desig").value,
+        plant: $("f_plant").value, email, phone: $("f_phone").value,
+        role: $("f_role").value, status: $("f_status").value,
+        createdDate: new Date().toISOString().slice(0,10)
+      });
+      closeModal();
+      renderUsers();
+      showToast(`User added with ID ${id}`);
+    });
+  });
+});
+
+function openEditUser(id){
+  const u = DB.users.find(x=>x.id===id);
+  openModal(`Edit user — ${id}`, userFormHtml(u), ()=>{
+    $("userSaveBtn").addEventListener("click", ()=>{
+      u.name = $("f_name").value.trim();
+      u.staffCode = $("f_code").value.trim();
+      u.department = $("f_dept").value;
+      u.designation = $("f_desig").value;
+      u.plant = $("f_plant").value;
+      u.email = $("f_email").value.trim();
+      u.phone = $("f_phone").value;
+      u.role = $("f_role").value;
+      u.status = $("f_status").value;
+      closeModal();
+      renderUsers();
+      showToast(`User ${id} updated`);
+    });
+  });
+}
+function toggleUserStatus(id){
+  const u = DB.users.find(x=>x.id===id);
+  u.status = u.status === "Active" ? "Inactive" : "Active";
+  renderUsers();
+  showToast(`User ${id} is now ${u.status}`);
+}
+
+["userSearch","userDeptFilter","userStatusFilter"].forEach(id=> $(id).addEventListener("input", renderUsers));
+
+/* ==================== ACCESS REQUESTS ==================== */
+function renderRequests(){
+  const search = $("reqSearch").value.trim().toLowerCase();
+  const status = $("reqStatusFilter").value;
+  const plant = $("reqPlantFilter").value;
+
+  let rows = DB.requests.slice().sort((a,b)=> b.requestDate.localeCompare(a.requestDate));
+  if(search) rows = rows.filter(r=>r.userName.toLowerCase().includes(search));
+  if(status !== "All") rows = rows.filter(r=>r.status===status);
+  if(plant !== "All") rows = rows.filter(r=>r.plant===plant);
+
+  $("reqMeta").textContent = `Showing ${rows.length} of ${DB.requests.length} requests`;
+
+  $("requestsTbody").innerHTML = rows.length ? rows.map(r=>`
+    <tr>
+      <td class="code">${r.id}</td>
+      <td>${esc(r.userName)}</td>
+      <td>${esc(r.plant)}</td>
+      <td>${esc(r.application)}</td>
+      <td>${esc(r.requestedRole)}</td>
+      <td>${r.requestDate}</td>
+      <td>${esc(r.requestedBy)}</td>
+      <td>${badge(r.status,"status")}</td>
+      <td>${esc(r.approvedBy||"—")}</td>
+      <td class="wrap">${esc(r.remarks||"—")}</td>
+      <td><button class="btn secondary small" onclick="openUpdateRequest('${r.id}')">Update</button></td>
+    </tr>`).join("") : `<tr><td colspan="11"><div class="empty-state">No access requests match the current filters.</div></td></tr>`;
+}
+
+$("btnAddRequest").addEventListener("click", ()=>{
+  const html = `
+    <div class="form-grid">
+      <div class="field full"><label>User name</label><select id="rf_user">${DB.users.map(u=>`<option>${esc(u.name)}</option>`).join("")}</select></div>
+      <div class="field"><label>Plant / site</label><select id="rf_plant">${PLANT_NAMES.map(p=>`<option>${esc(p)}</option>`).join("")}</select></div>
+      <div class="field"><label>Application</label><select id="rf_app">${APPLICATIONS.map(a=>`<option>${esc(a)}</option>`).join("")}</select></div>
+      <div class="field"><label>Requested role</label><select id="rf_role">${APP_ROLES.map(r=>`<option>${r}</option>`).join("")}</select></div>
+      <div class="field"><label>Requested by</label><select id="rf_by">${REQUESTED_BY_OPTIONS.map(o=>`<option>${o}</option>`).join("")}</select></div>
+      <div class="field full"><label>Remarks (optional)</label><textarea id="rf_remarks" rows="2"></textarea></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn" id="reqSaveBtn">Submit request</button>
+    </div>`;
+  openModal("New access request", html, ()=>{
+    $("reqSaveBtn").addEventListener("click", ()=>{
+      const id = "REQ" + String(nextReqSeq++).padStart(3,"0");
+      DB.requests.unshift({
+        id, userName: $("rf_user").value, plant: $("rf_plant").value,
+        application: $("rf_app").value, requestedRole: $("rf_role").value,
+        requestDate: new Date().toISOString().slice(0,10),
+        requestedBy: $("rf_by").value, status: "Pending", approvedBy: "",
+        remarks: $("rf_remarks").value.trim()
+      });
+      closeModal();
+      renderRequests();
+      showToast(`Access request submitted with ID ${id}`);
+    });
+  });
+});
+
+function openUpdateRequest(id){
+  const r = DB.requests.find(x=>x.id===id);
+  const opt = (val,cur)=>`<option ${val===cur?"selected":""}>${val}</option>`;
+  const html = `
+    <p class="helper-text"><strong>${esc(r.userName)}</strong> requested <strong>${esc(r.requestedRole)}</strong> access to <strong>${esc(r.application)}</strong></p>
+    <div class="form-grid">
+      <div class="field"><label>Status</label><select id="ru_status">${REQUEST_STATUSES.map(s=>opt(s,r.status)).join("")}</select></div>
+      <div class="field"><label>Approved / reviewed by</label><select id="ru_by">${TECHNICIANS.map(t=>opt(t,r.approvedBy)).join("")}</select></div>
+      <div class="field full"><label>Remarks</label><textarea id="ru_remarks" rows="2">${esc(r.remarks)}</textarea></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn" id="reqUpdateBtn">Update request</button>
+    </div>`;
+  openModal(`Update request — ${id}`, html, ()=>{
+    $("reqUpdateBtn").addEventListener("click", ()=>{
+      r.status = $("ru_status").value;
+      r.approvedBy = $("ru_by").value;
+      r.remarks = $("ru_remarks").value.trim();
+      closeModal();
+      renderRequests();
+      showToast(`Request ${id} updated to "${r.status}"`);
+    });
+  });
+}
+
+["reqSearch","reqStatusFilter","reqPlantFilter"].forEach(id=> $(id).addEventListener("input", renderRequests));
+
+/* ==================== TICKETS ==================== */
+function renderTickets(){
+  const search = $("tickSearch").value.trim().toLowerCase();
+  const status = $("tickStatusFilter").value;
+  const priority = $("tickPriorityFilter").value;
+  const category = $("tickCategoryFilter").value;
+
+  let rows = DB.tickets.slice().sort((a,b)=> b.date.localeCompare(a.date));
+  if(search) rows = rows.filter(t=> t.id.toLowerCase().includes(search) || t.userName.toLowerCase().includes(search));
+  if(status !== "All") rows = rows.filter(t=>t.status===status);
+  if(priority !== "All") rows = rows.filter(t=>t.priority===priority);
+  if(category !== "All") rows = rows.filter(t=>t.category===category);
+
+  $("tickMeta").textContent = `Showing ${rows.length} of ${DB.tickets.length} tickets`;
+
+  $("ticketsTbody").innerHTML = rows.length ? rows.map(t=>`
+    <tr>
+      <td class="code">${t.id}</td>
+      <td>${t.date}</td>
+      <td>${esc(t.userName)}</td>
+      <td>${esc(t.plant)}</td>
+      <td>${esc(t.category)}</td>
+      <td class="wrap">${esc(t.description)}</td>
+      <td>${badge(t.priority,"priority")}</td>
+      <td>${esc(t.assignedTo)}</td>
+      <td>${badge(t.status,"status")}</td>
+      <td><button class="btn secondary small" onclick="openUpdateTicket('${t.id}')">Update</button></td>
+    </tr>`).join("") : `<tr><td colspan="10"><div class="empty-state">No tickets match the current filters.</div></td></tr>`;
+}
+
+$("btnAddTicket").addEventListener("click", ()=>{
+  const html = `
+    <div class="form-grid">
+      <div class="field"><label>User name</label><select id="tf_user">${DB.users.map(u=>`<option>${esc(u.name)}</option>`).join("")}</select></div>
+      <div class="field"><label>Plant / site</label><select id="tf_plant">${PLANT_NAMES.map(p=>`<option>${esc(p)}</option>`).join("")}</select></div>
+      <div class="field"><label>Category</label><select id="tf_category">${TICKET_CATEGORIES.map(c=>`<option>${c}</option>`).join("")}</select></div>
+      <div class="field"><label>Priority</label><select id="tf_priority">${PRIORITIES.map(p=>`<option>${p}</option>`).join("")}</select></div>
+      <div class="field full"><label>Issue description</label><textarea id="tf_desc" rows="3" placeholder="Describe the issue"></textarea></div>
+      <div class="field full"><label>Assign to</label><select id="tf_assign">${TECHNICIANS.map(t=>`<option>${t}</option>`).join("")}</select></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn" id="tickSaveBtn">Create ticket</button>
+    </div>`;
+  openModal("Create new support ticket", html, ()=>{
+    $("tickSaveBtn").addEventListener("click", ()=>{
+      const desc = $("tf_desc").value.trim();
+      if(!desc){ showToast("Please describe the issue before submitting."); return; }
+      const id = "TCK" + String(nextTicketSeq++).padStart(3,"0");
+      DB.tickets.unshift({
+        id, date: new Date().toISOString().slice(0,10),
+        userName: $("tf_user").value, plant: $("tf_plant").value,
+        category: $("tf_category").value, description: desc,
+        priority: $("tf_priority").value, assignedTo: $("tf_assign").value,
+        status: "Open", resolution: "", closedDate: ""
+      });
+      closeModal();
+      renderTickets();
+      showToast(`Ticket created with ID ${id}`);
+    });
+  });
+});
+
+function openUpdateTicket(id){
+  const t = DB.tickets.find(x=>x.id===id);
+  const opt = (val,cur)=>`<option ${val===cur?"selected":""}>${val}</option>`;
+  const html = `
+    <p class="helper-text">${esc(t.description)}<br>Reported by <strong>${esc(t.userName)}</strong> · ${esc(t.plant)} · ${esc(t.category)} · ${t.priority} priority</p>
+    <div class="form-grid">
+      <div class="field"><label>Status</label><select id="tu_status">${TICKET_STATUSES.map(s=>opt(s,t.status)).join("")}</select></div>
+      <div class="field"><label>Assigned to</label><select id="tu_assign">${TECHNICIANS.map(x=>opt(x,t.assignedTo)).join("")}</select></div>
+      <div class="field full"><label>Resolution notes</label><textarea id="tu_resolution" rows="3">${esc(t.resolution)}</textarea></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn" id="tickUpdateBtn">Update ticket</button>
+    </div>`;
+  openModal(`Update ticket — ${id}`, html, ()=>{
+    $("tickUpdateBtn").addEventListener("click", ()=>{
+      t.status = $("tu_status").value;
+      t.assignedTo = $("tu_assign").value;
+      t.resolution = $("tu_resolution").value.trim();
+      t.closedDate = (t.status==="Resolved"||t.status==="Closed") ? new Date().toISOString().slice(0,10) : "";
+      closeModal();
+      renderTickets();
+      showToast(`Ticket ${id} updated to "${t.status}"`);
+    });
+  });
+}
+
+["tickSearch","tickStatusFilter","tickPriorityFilter","tickCategoryFilter"].forEach(id=> $(id).addEventListener("input", renderTickets));
+
+/* ==================== PLANTS ==================== */
+function renderPlants(){
+  const rows = DB.plants.map(p=>{
+    const activeUsers = DB.users.filter(u=>u.plant===p.name && u.status==="Active").length;
+    const openTickets = DB.tickets.filter(t=>t.plant===p.name && t.status!=="Resolved" && t.status!=="Closed").length;
+    return { ...p, activeUsers, openTickets };
+  });
+
+  $("plantsTbody").innerHTML = rows.map(p=>`
+    <tr>
+      <td>${esc(p.name)}</td>
+      <td>${esc(p.location)}</td>
+      <td>${badge(p.status,"status")}</td>
+      <td>${p.activeUsers}</td>
+      <td>${p.openTickets}</td>
+    </tr>`).join("");
+
+  drawChart("chartPlantOpen", {
+    type: "bar",
+    data: {
+      labels: rows.map(p=>p.name),
+      datasets: [{
+        data: rows.map(p=>p.openTickets),
+        backgroundColor: rows.map(p=> p.status==="Active" ? "#2F6FED" : "#B9770E")
+      }]
+    },
+    options: { indexAxis:"y", plugins:{legend:{display:false}}, scales:{ x:{ beginAtZero:true, ticks:{precision:0} } } }
+  });
+}
+
+/* ==================== REPORTS ==================== */
+function tableRows(map){
+  return Object.entries(map).map(([k,v])=>`<tr><td>${esc(k)}</td><td>${v}</td></tr>`).join("");
+}
+
+function renderReports(){
+  const byStatus = countBy(DB.tickets, "status");
+  $("repStatusTbody").innerHTML = tableRows(byStatus);
+  drawChart("chartRepStatus", {
+    type:"bar",
+    data:{ labels:Object.keys(byStatus), datasets:[{ data:Object.values(byStatus), backgroundColor:"#2F6FED" }] },
+    options:{ plugins:{legend:{display:false}}, scales:{ y:{beginAtZero:true, ticks:{precision:0}} } }
+  });
+
+  $("repPriorityTbody").innerHTML = tableRows(countBy(DB.tickets,"priority"));
+  $("repCategoryTbody").innerHTML = tableRows(countBy(DB.tickets,"category"));
+  $("repPlantTbody").innerHTML = tableRows(countBy(DB.tickets,"plant"));
+
+  const byTech = countBy(DB.tickets, "assignedTo");
+  $("repWorkloadTbody").innerHTML = tableRows(byTech);
+  drawChart("chartRepWorkload", {
+    type:"bar",
+    data:{ labels:Object.keys(byTech), datasets:[{ data:Object.values(byTech), backgroundColor:"#1B8A5A" }] },
+    options:{ indexAxis:"y", plugins:{legend:{display:false}}, scales:{ x:{beginAtZero:true, ticks:{precision:0}} } }
+  });
+
+  $("repReqStatusTbody").innerHTML = tableRows(countBy(DB.requests,"status"));
+
+  const byMonth = {};
+  DB.tickets.forEach(t=>{
+    const month = t.date.slice(0,7);
+    byMonth[month] = (byMonth[month]||0)+1;
+  });
+  const months = Object.keys(byMonth).sort();
+  drawChart("chartRepTrend", {
+    type:"line",
+    data:{ labels:months, datasets:[{ data:months.map(m=>byMonth[m]), borderColor:"#2F6FED", backgroundColor:"rgba(47,111,237,0.12)", fill:true, tension:0.25 }] },
+    options:{ plugins:{legend:{display:false}}, scales:{ y:{beginAtZero:true, ticks:{precision:0}} } }
+  });
+}
+
+/* ==================== INITIAL RENDER ==================== */
+populateDeptFilter();
+populateCategoryFilter();
+populatePlantFilters();
+renderDashboard();
+renderUsers();
+renderRequests();
+renderTickets();
+</script>
+</body>
+</html>
